@@ -42,10 +42,14 @@
         </form>
 
         <div id="results" class="max-w-xl mx-auto mt-8 bg-gray-800 p-8 rounded-lg" style="display: none;">
-            <h2 class="text-2xl font-bold mb-4">Generated Lyrics</h2>
-            <div id="lyrics-output" class="whitespace-pre-wrap"></div>
-            <div id="audio-player" class="mt-4">
-                <audio controls style="width: 100%;"></audio>
+            <h2 id="song-title" class="text-2xl font-bold mb-2"></h2>
+            <p id="song-artist" class="text-lg text-gray-400 mb-4"></p>
+            <div id="lyrics-output" class="whitespace-pre-wrap bg-gray-700 p-4 rounded mb-4"></div>
+            <div id="audio-player-container" class="mt-4" style="display: none;">
+                <audio id="audio-player" controls style="width: 100%;"></audio>
+                <a id="download-button" href="#" class="mt-4 inline-block w-full text-center bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                    Download Song
+                </a>
             </div>
         </div>
     </div>
@@ -53,41 +57,85 @@
     <script>
         const form = document.getElementById('lyrics-form');
         const resultsDiv = document.getElementById('results');
+        const songTitle = document.getElementById('song-title');
+        const songArtist = document.getElementById('song-artist');
         const lyricsOutput = document.getElementById('lyrics-output');
+        const audioPlayerContainer = document.getElementById('audio-player-container');
         const audioPlayer = document.getElementById('audio-player');
+        const downloadButton = document.getElementById('download-button');
+        const generateButton = form.querySelector('button[type="submit"]');
 
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData(form);
-            const words = formData.get('words').split(',').map(word => word.trim());
-            const mood = formData.get('mood');
-            const singer = formData.get('singer');
-
+        async function generateLyrics(words, mood, singer) {
             const response = await fetch('/api/generate-lyrics', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ words, mood, singer })
             });
 
-            if (response.ok) {
-                const data = await response.json();
-                let formattedLyrics = '';
-                if (data.lyrics) {
-                    for (const section in data.lyrics) {
-                        formattedLyrics += `<strong>${section.charAt(0).toUpperCase() + section.slice(1)}:</strong>\n`;
-                        formattedLyrics += `${data.lyrics[section].join('\n')}\n\n`;
-                    }
-                } else {
-                    formattedLyrics = "No lyrics generated.";
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to generate lyrics.');
+            }
+            return response.json();
+        }
+
+        async function generateAudio(lyrics) {
+            const response = await fetch('/api/generate-audio', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lyrics })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to generate audio.');
+            }
+            return response.json();
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            generateButton.disabled = true;
+            generateButton.textContent = 'Generating...';
+            resultsDiv.style.display = 'none';
+            audioPlayerContainer.style.display = 'none';
+
+            try {
+                const formData = new FormData(form);
+                const words = formData.get('words').split(',').map(word => word.trim());
+                const mood = formData.get('mood');
+                const singer = formData.get('singer');
+
+                // 1. Generate Lyrics
+                const lyricsData = await generateLyrics(words, mood, singer);
+
+                songTitle.textContent = lyricsData.title;
+                songArtist.textContent = `By: ${lyricsData.artist}`;
+                lyricsOutput.textContent = lyricsData.lyrics;
+
+                // 2. Generate Audio
+                try {
+                    console.log("Generating audio for:", lyricsData.lyrics);
+                    const audioData = await generateAudio(lyricsData.lyrics);
+                    console.log("Audio data received:", audioData);
+
+                    audioPlayer.src = audioData.audio_url;
+                    downloadButton.href = audioData.download_url;
+
+                    // Show the results
+                    resultsDiv.style.display = 'block';
+                    audioPlayerContainer.style.display = 'block';
+                    console.log("Results displayed");
+                } catch (error) {
+                    console.error("Error generating audio:", error);
+                    alert("Error generating audio: " + error.message);
                 }
-                lyricsOutput.innerHTML = formattedLyrics;
-                resultsDiv.style.display = 'block';
-                 // Clear previous audio and show placeholder
-                audioPlayer.innerHTML = '<audio controls style="width: 100%;"></audio>';
-            } else {
-                alert('Error generating lyrics. Please try again.');
+
+            } catch (error) {
+                alert(`An error occurred: ${error.message}`);
+            } finally {
+                generateButton.disabled = false;
+                generateButton.textContent = 'Generate Lyrics';
             }
         });
     </script>
