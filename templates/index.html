@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Custom Singer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white">
+    <div class="container mx-auto p-4">
+        <h1 class="text-3xl font-bold text-center mb-8">AI Custom Singer</h1>
+
+        <form id="lyrics-form" class="max-w-xl mx-auto bg-gray-800 p-8 rounded-lg">
+            <div class="mb-4">
+                <label for="words" class="block text-gray-300 mb-2">Words (comma-separated)</label>
+                <textarea id="words" name="words" rows="3" class="w-full bg-gray-700 text-white p-2 rounded" placeholder="e.g., school, children, fun"></textarea>
+            </div>
+
+            <div class="mb-4">
+                <label for="mood" class="block text-gray-300 mb-2">Mood</label>
+                <select id="mood" name="mood" class="w-full bg-gray-700 text-white p-2 rounded">
+                    <option value="Humor">Humor</option>
+                    <option value="Motivation">Motivation</option>
+                    <option value="Romance">Romance</option>
+                    <option value="Entertainment">Entertainment</option>
+                </select>
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-gray-300 mb-2">Singer</label>
+                <div class="flex items-center">
+                    <input type="radio" id="singer-girl" name="singer" value="girl" class="mr-2" checked>
+                    <label for="singer-girl" class="mr-4">Girl</label>
+                    <input type="radio" id="singer-boy" name="singer" value="boy" class="mr-2">
+                    <label for="singer-boy">Boy</label>
+                </div>
+            </div>
+
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                Generate Lyrics
+            </button>
+        </form>
+
+        <div id="results" class="max-w-xl mx-auto mt-8 bg-gray-800 p-8 rounded-lg" style="display: none;">
+            <h2 class="text-2xl font-bold mb-4">Generated Lyrics</h2>
+            <div id="lyrics-output" class="whitespace-pre-wrap"></div>
+            <div id="audio-player" class="mt-4">
+                <audio controls style="width: 100%;"></audio>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('lyrics-form');
+        const resultsDiv = document.getElementById('results');
+        const lyricsOutput = document.getElementById('lyrics-output');
+        const audioPlayer = document.getElementById('audio-player');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(form);
+            const words = formData.get('words').split(',').map(word => word.trim());
+            const mood = formData.get('mood');
+            const singer = formData.get('singer');
+
+            const response = await fetch('/api/generate-lyrics', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ words, mood, singer })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                let formattedLyrics = '';
+                if (data.lyrics) {
+                    for (const section in data.lyrics) {
+                        formattedLyrics += `<strong>${section.charAt(0).toUpperCase() + section.slice(1)}:</strong>\n`;
+                        formattedLyrics += `${data.lyrics[section].join('\n')}\n\n`;
+                    }
+                } else {
+                    formattedLyrics = "No lyrics generated.";
+                }
+                lyricsOutput.innerHTML = formattedLyrics;
+                resultsDiv.style.display = 'block';
+                 // Clear previous audio and show placeholder
+                audioPlayer.innerHTML = '<audio controls style="width: 100%;"></audio>';
+            } else {
+                alert('Error generating lyrics. Please try again.');
+            }
+        });
+    </script>
+</body>
+</html>
