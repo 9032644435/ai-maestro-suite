@@ -32,7 +32,7 @@ def generate_lyrics():
         return jsonify({"error": "Missing required fields"}), 400
 
     try:
-        model = genai.GenerativeModel('gemini-pro')
+        model = genai.GenerativeModel('gemini-1.5-flash')
 
         prompt = f"""
         You are an expert Telugu songwriter. Your task is to create a song and return it as a JSON object.
