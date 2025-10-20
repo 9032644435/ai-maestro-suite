@@ -42,11 +42,11 @@
             </button>
         </form>
 
-        <div id="results" class="max-w-xl mx-auto mt-8 bg-gray-800 p-8 rounded-lg" style="display: none;">
+        <div id="results" class="max-w-xl mx-auto mt-8 bg-gray-800 p-8 rounded-lg">
             <h2 id="song-title" class="text-2xl font-bold mb-2"></h2>
             <p id="song-artist" class="text-lg text-gray-400 mb-4"></p>
             <div id="lyrics-output" class="whitespace-pre-wrap bg-gray-700 p-4 rounded mb-4"></div>
-            <div id="audio-player-container" class="mt-4" style="display: none;">
+            <div id="audio-player-container" class="mt-4">
                 <audio id="audio-player" controls style="width: 100%;"></audio>
                 <a id="download-button" href="#" class="mt-4 inline-block w-full text-center bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
                     Download Song
@@ -98,8 +98,12 @@
             e.preventDefault();
             generateButton.disabled = true;
             generateButton.textContent = 'Generating...';
-            resultsDiv.style.display = 'none';
-            audioPlayerContainer.style.display = 'none';
+
+            // Clear previous results
+            lyricsOutput.textContent = '';
+            songTitle.textContent = '';
+            songArtist.textContent = '';
+            audioPlayer.src = '';
 
             try {
                 const formData = new FormData(form);
