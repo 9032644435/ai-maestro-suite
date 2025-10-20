@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Custom Singer - V1.1</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white">
+    <div class="container mx-auto p-4">
+        <h1 class="text-3xl font-bold text-center mb-8">AI Custom Singer</h1>
+
+        <form id="lyrics-form" class="max-w-xl mx-auto bg-gray-800 p-8 rounded-lg">
+            <div class="mb-4">
+                <label for="words" class="block text-gray-300 mb-2">Words (comma-separated)</label>
+                <textarea id="words" name="words" rows="3" class="w-full bg-gray-700 text-white p-2 rounded" placeholder="e.g., school, children, fun"></textarea>
+            </div>
+
+            <div class="mb-4">
+                <label for="mood" class="block text-gray-300 mb-2">Mood</label>
+                <select id="mood" name="mood" class="w-full bg-gray-700 text-white p-2 rounded">
+                    <option value="Humor">Humor</option>
+                    <option value="Motivation">Motivation</option>
+                    <option value="Romance">Romance</option>
+                    <option value="Entertainment">Entertainment</option>
+                </select>
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-gray-300 mb-2">Singer</label>
+                <div class="flex items-center">
+                    <input type="radio" id="singer-girl" name="singer" value="girl" class="mr-2" checked>
+                    <label for="singer-girl" class="mr-4">Girl</label>
+                    <input type="radio" id="singer-boy" name="singer" value="boy" class="mr-2">
+                    <label for="singer-boy">Boy</label>
+                </div>
+            </div>
+
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                Generate Lyrics
+            </button>
+        </form>
+
+        <div id="results" class="max-w-xl mx-auto mt-8 bg-gray-800 p-8 rounded-lg" style="display: none;">
+            <h2 id="song-title" class="text-2xl font-bold mb-2"></h2>
+            <p id="song-artist" class="text-lg text-gray-400 mb-4"></p>
+            <div id="lyrics-output" class="whitespace-pre-wrap bg-gray-700 p-4 rounded mb-4"></div>
+            <div id="audio-player-container" class="mt-4" style="display: none;">
+                <audio id="audio-player" controls style="width: 100%;"></audio>
+                <a id="download-button" href="#" class="mt-4 inline-block w-full text-center bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                    Download Song
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('lyrics-form');
+        const resultsDiv = document.getElementById('results');
+        const songTitle = document.getElementById('song-title');
+        const songArtist = document.getElementById('song-artist');
+        const lyricsOutput = document.getElementById('lyrics-output');
+        const audioPlayerContainer = document.getElementById('audio-player-container');
+        const audioPlayer = document.getElementById('audio-player');
+        const downloadButton = document.getElementById('download-button');
+        const generateButton = form.querySelector('button[type="submit"]');
+
+        async function generateLyrics(words, mood, singer) {
+            const response = await fetch('/api/generate-lyrics', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ words, mood, singer })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to generate lyrics.');
+            }
+            return response.json();
+        }
+
+        async function generateAudio(lyrics) {
+            const response = await fetch('/api/generate-audio', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lyrics })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to generate audio.');
+            }
+            return response.json();
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            generateButton.disabled = true;
+            generateButton.textContent = 'Generating...';
+            resultsDiv.style.display = 'none';
+            audioPlayerContainer.style.display = 'none';
+
+            try {
+                const formData = new FormData(form);
+                const words = formData.get('words').split(',').map(word => word.trim());
+                const mood = formData.get('mood');
+                const singer = formData.get('singer');
+
+                const lyricsData = await generateLyrics(words, mood, singer);
+
+                songTitle.textContent = lyricsData.title;
+                songArtist.textContent = `By: ${lyricsData.artist}`;
+                lyricsOutput.textContent = lyricsData.lyrics;
+
+                const audioData = await generateAudio(lyricsData.lyrics);
+
+                audioPlayer.src = audioData.audio_url;
+                downloadButton.href = audioData.download_url;
+
+                resultsDiv.style.display = 'block';
+                audioPlayerContainer.style.display = 'block';
+
+            } catch (error) {
+                alert(`An error occurred: ${error.message}`);
+            } finally {
+                generateButton.disabled = false;
+                generateButton.textContent = 'Generate Lyrics';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+gunicorn.log
+static/audio/
